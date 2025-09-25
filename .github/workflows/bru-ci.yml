@@ -1,0 +1,88 @@
+name: Bruno CI
+
+on:
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Choose which suite to run'
+        required: true
+        default: 'PERF'
+        type: choice
+        options:
+          - QA
+          - PERF
+          - Both
+      test_tags:
+        description: 'Specific suite to run (e.g., smoke, regression)'
+        required: false
+        default: 'smoke'
+        type: choice
+        options:
+          - all
+          - smoke
+          - regression
+
+jobs:
+  bruno-test:
+    name: ${{ github.event_name == 'workflow_dispatch' && format('{0}-{1}', inputs.environment, inputs.test_tags) || 'perf-all' }}
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ./bruno
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install Bruno CLI
+        run: npm i -g @usebruno/cli
+
+      - name: Create .env from GitHub Secrets
+        run: |
+              echo "QA_X_API_KEY=${{ secrets.QA_X_API_KEY }}" >> .env
+              echo "PERF_X_API_KEY=${{ secrets.PERF_X_API_KEY }}" >> .env
+
+
+      - name: Run QA suite
+        if: ${{inputs.environment == 'QA'}}
+        run: |
+          testSuite="${{ inputs.test_tags }}"
+          if [ "$testSuite" = "smoke" ]; then
+            # Run only smoke
+            bru run --env QA --tags=smoke --reporter-junit results_qa_smoke.xml --reporter-html results_qa_smoke.html
+          elif [ "$testSuite" = "regression" ]; then
+            # Run full suite for regression
+            bru run --env QA --tags=regression --reporter-junit results_qa_regression.xml --reporter-html results_qa_regression.html
+          else
+            # Default: run all tests
+            bru run --env QA --reporter-junit results_qa.xml --reporter-html results_qa.html
+          fi
+
+      - name: Run PERF suite
+        if: ${{inputs.environment == 'PERF'}}
+        run: |
+          testSuite="${{ inputs.test_tags }}"
+          if [ "$testSuite" = "smoke" ]; then
+            # Run only AUTH tests for smoke
+            bru run --env PERF --tags=smoke --reporter-junit results_perf_smoke.xml --reporter-html results_perf_smoke.html
+          elif [ "$testSuite" = "regression" ]; then
+            # Run full suite for regression
+            bru run --env PERF --tags=regression --reporter-junit results_perf_regression.xml --reporter-html results_perf_regression.html
+          else
+            # Default: run all tests
+            bru run --env PERF --reporter-junit results_perf.xml --reporter-html results_perf.html
+          fi
+
+      - name: Upload test results
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: bruno-test-results
+          path: |
+            bruno/results_*.xml
+            bruno/results_*.html
+

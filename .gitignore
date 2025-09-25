@@ -1,0 +1,16 @@
+node_modules/
+.DS_Store
+Thumbs.db
+.env
+.env.*
+*.local
+.bruno/
+*.br_history
+*.log
+
+# Report files and backups
+results*.html
+results*.xml
+results*.json
+*.backup
+

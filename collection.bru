@@ -1,0 +1,25 @@
+meta {
+  name: PET STORE API
+}
+
+auth {
+  mode: none
+}
+
+vars:pre-request {
+  TENANT_ID: 
+}
+
+script:pre-request {
+  // Mask sensitive variables in logs/reports
+  const sensitiveVars = ['token', 'client_secret', 'api_key', 'x_client_secret'];
+  
+  sensitiveVars.forEach(varName => {
+    const value = bru.getVar(varName);
+    if (value && value.length > 10) {
+      // Keep only first 4 and last 4 characters for debugging
+      const masked = value.substring(0, 4) + '***' + value.substring(value.length - 4);
+      console.log(`${varName}: ${masked}`);
+    }
+  });
+}
