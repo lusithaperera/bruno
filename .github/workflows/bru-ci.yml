@@ -43,37 +43,45 @@ jobs:
 
       - name: Create .env from GitHub Secrets
         run: |
-              echo "QA_X_API_KEY=${{ secrets.QA_X_API_KEY }}" >> .env
-              echo "PERF_X_API_KEY=${{ secrets.PERF_X_API_KEY }}" >> .env
-
+          echo "QA_X_API_KEY=${{ secrets.QA_X_API_KEY }}" >> .env
+          echo "PERF_X_API_KEY=${{ secrets.PERF_X_API_KEY }}" >> .env
 
       - name: Run QA suite
-        if: ${{inputs.environment == 'QA'}}
+        if: ${{ inputs.environment == 'QA' }}
         run: |
           testSuite="${{ inputs.test_tags }}"
           if [ "$testSuite" = "smoke" ]; then
-            # Run only smoke
             bru run --env QA --tags=smoke --reporter-junit results_qa_smoke.xml --reporter-html results_qa_smoke.html
           elif [ "$testSuite" = "regression" ]; then
-            # Run full suite for regression
             bru run --env QA --tags=regression --reporter-junit results_qa_regression.xml --reporter-html results_qa_regression.html
           else
-            # Default: run all tests
             bru run --env QA --reporter-junit results_qa.xml --reporter-html results_qa.html
           fi
 
       - name: Run PERF suite
-        if: ${{inputs.environment == 'PERF'}}
+        if: ${{ inputs.environment == 'PERF' }}
         run: |
           testSuite="${{ inputs.test_tags }}"
           if [ "$testSuite" = "smoke" ]; then
-            # Run only AUTH tests for smoke
             bru run --env PERF --tags=smoke --reporter-junit results_perf_smoke.xml --reporter-html results_perf_smoke.html
           elif [ "$testSuite" = "regression" ]; then
-            # Run full suite for regression
             bru run --env PERF --tags=regression --reporter-junit results_perf_regression.xml --reporter-html results_perf_regression.html
           else
-            # Default: run all tests
+            bru run --env PERF --reporter-junit results_perf.xml --reporter-html results_perf.html
+          fi
+
+      - name: Run Both suites
+        if: ${{ inputs.environment == 'Both' }}
+        run: |
+          testSuite="${{ inputs.test_tags }}"
+          if [ "$testSuite" = "smoke" ]; then
+            bru run --env QA --tags=smoke --reporter-junit results_qa_smoke.xml --reporter-html results_qa_smoke.html
+            bru run --env PERF --tags=smoke --reporter-junit results_perf_smoke.xml --reporter-html results_perf_smoke.html
+          elif [ "$testSuite" = "regression" ]; then
+            bru run --env QA --tags=regression --reporter-junit results_qa_regression.xml --reporter-html results_qa_regression.html
+            bru run --env PERF --tags=regression --reporter-junit results_perf_regression.xml --reporter-html results_perf_regression.html
+          else
+            bru run --env QA --reporter-junit results_qa.xml --reporter-html results_qa.html
             bru run --env PERF --reporter-junit results_perf.xml --reporter-html results_perf.html
           fi
 
@@ -83,6 +91,6 @@ jobs:
         with:
           name: bruno-test-results
           path: |
-            bruno/results_*.xml
-            bruno/results_*.html
+            results_*.xml
+            results_*.html
 
